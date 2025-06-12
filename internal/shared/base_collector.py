@@ -70,7 +70,6 @@ class BaseCollector(ABC):
                     saved_count = 0
 
                     for trade in trades:
-                        # Проверяем существование записи
                         cursor.execute(
                             f"SELECT 1 FROM {table_name} WHERE trade_id = %s LIMIT 1",
                             (trade['trade_id'],)
@@ -79,8 +78,7 @@ class BaseCollector(ABC):
                         if cursor.fetchone():
                             continue
 
-                        # Вставляем новую запись
-                        await self._insert_trade(cursor, trade, table_name)
+                        self._insert_trade(cursor, trade, table_name)
                         saved_count += 1
 
                     conn.commit()
@@ -92,6 +90,6 @@ class BaseCollector(ABC):
             raise error
 
     @abstractmethod
-    async def _insert_trade(self, cursor, trade: Dict[str, Any], table_name: str):
-        """Вставка торга в базу данных"""
+    def _insert_trade(self, cursor, trade: Dict[str, Any], table_name: str):
+        """Вставка торга в базу данных (синхронный метод)"""
         pass

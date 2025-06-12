@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass
-from typing import Optional
+from typing import List
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -35,7 +35,7 @@ class Config:
         self.database = DatabaseConfig()
         self.collectors = CollectorConfig()
 
-    def validate(self) -> list[str]:
+    def validate(self) -> List[str]:
         errors = []
 
         if not self.database.user:
@@ -52,5 +52,4 @@ class Config:
 
         return errors
 
-# Глобальный экземпляр конфигурации
 config = Config()

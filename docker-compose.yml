@@ -5,27 +5,42 @@ services:
     image: postgres:15
     container_name: ${PG_CONTAINER_NAME}
     environment:
-      POSTGRES_DB: ${PG_NAME}
+      POSTGRES_DB: ${PG_DATABASE}
       POSTGRES_USER: ${PG_USER}
-      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
     ports:
       - "${PG_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./migrations/init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_DATABASE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  hedgie-gateways:
+  collectors:
     build: .
-    container_name: ${HEDGIE_GATEWAYS_CONTAINER_NAME}
+    container_name: ${COLLECTORS_CONTAINER_NAME}
     environment:
       - PG_HOST=postgres
       - PG_PORT=5432
-      - PG_NAME=${PG_NAME}
       - PG_USER=${PG_USER}
       - PG_PASSWORD=${PG_PASSWORD}
+      - PG_DATABASE=${PG_DATABASE}
+      - DERIBIT_ENABLED=${DERIBIT_ENABLED}
+      - OKX_ENABLED=${OKX_ENABLED}
+      - BINANCE_ENABLED=${BINANCE_ENABLED}
+      - BYBIT_ENABLED=${BYBIT_ENABLED}
+      - CME_ENABLED=${CME_ENABLED}
+      - COLLECTION_INTERVAL=${COLLECTION_INTERVAL}
+      - LOG_LEVEL=${LOG_LEVEL}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
     restart: unless-stopped
 
 volumes:

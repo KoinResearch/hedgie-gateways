@@ -47,7 +47,6 @@ services:
       - BINANCE_ENABLED=${BINANCE_ENABLED}
       - BYBIT_ENABLED=${BYBIT_ENABLED}
       - CME_ENABLED=${CME_ENABLED}
-      - COLLECTION_INTERVAL=${COLLECTION_INTERVAL}
       - LOG_LEVEL=${LOG_LEVEL}
     depends_on:
       postgres:

@@ -34,14 +34,12 @@ class BaseCollector(ABC):
         self.running = True
         self.logger.info("Starting collector")
 
-        while self.running:
-            try:
-                await self._collect_data()
-                await asyncio.sleep(60)  # Интервал сбора данных
-            except Exception as error:
-                self.logger.error("Error in collection cycle", error)
-                self.stats['failed_requests'] += 1
-                await asyncio.sleep(60)
+        # Для WebSocket коллекторов - запускаем непрерывный сбор данных
+        try:
+            await self._collect_data()
+        except Exception as error:
+            self.logger.error("Error in collection cycle", error)
+            self.stats['failed_requests'] += 1
 
     @abstractmethod
     async def _collect_data(self):
@@ -61,7 +59,7 @@ class BaseCollector(ABC):
     async def save_trades(self, trades: List[Dict[str, Any]], table_name: str):
         """Сохранение торгов в базу данных"""
         if not trades:
-            self.logger.info("No trades to save")
+            self.logger.debug("No trades to save")
             return
 
         try:
@@ -70,20 +68,26 @@ class BaseCollector(ABC):
                     saved_count = 0
 
                     for trade in trades:
-                        cursor.execute(
-                            f"SELECT 1 FROM {table_name} WHERE trade_id = %s LIMIT 1",
-                            (trade['trade_id'],)
-                        )
+                        try:
+                            cursor.execute(
+                                f"SELECT 1 FROM {table_name} WHERE trade_id = %s LIMIT 1",
+                                (trade['trade_id'],)
+                            )
 
-                        if cursor.fetchone():
+                            if cursor.fetchone():
+                                continue
+
+                            self._insert_trade(cursor, trade, table_name)
+                            saved_count += 1
+                        except Exception as trade_error:
+                            self.logger.warning(f"Failed to save trade {trade.get('trade_id', 'unknown')}: {trade_error}")
                             continue
-
-                        self._insert_trade(cursor, trade, table_name)
-                        saved_count += 1
 
                     conn.commit()
                     self.stats['total_trades_saved'] += saved_count
-                    self.logger.info(f"Saved {saved_count} new trades to {table_name}")
+
+                    if saved_count > 0:
+                        self.logger.info(f"Saved {saved_count} new trades to {table_name}")
 
         except Exception as error:
             self.logger.error("Error saving trades", error)

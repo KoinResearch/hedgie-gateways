@@ -245,6 +245,24 @@ CREATE INDEX IF NOT EXISTS idx_okx_eth_trades_instrument ON okx_eth_trades (inst
 -- Индексы по направлению торгов
 CREATE INDEX IF NOT EXISTS idx_all_btc_trades_direction ON all_btc_trades (direction);
 CREATE INDEX IF NOT EXISTS idx_all_eth_trades_direction ON all_eth_trades (direction);
+CREATE INDEX IF NOT EXISTS idx_okx_btc_trades_direction ON okx_btc_trades (direction);
+CREATE INDEX IF NOT EXISTS idx_okx_eth_trades_direction ON okx_eth_trades (direction);
+
+-- Дополнительные индексы для аналитики
+CREATE INDEX IF NOT EXISTS idx_all_btc_trades_price ON all_btc_trades (price);
+CREATE INDEX IF NOT EXISTS idx_all_eth_trades_price ON all_eth_trades (price);
+CREATE INDEX IF NOT EXISTS idx_okx_btc_trades_price ON okx_btc_trades (price);
+CREATE INDEX IF NOT EXISTS idx_okx_eth_trades_price ON okx_eth_trades (price);
+CREATE INDEX IF NOT EXISTS idx_all_btc_trades_amount ON all_btc_trades (amount);
+CREATE INDEX IF NOT EXISTS idx_all_eth_trades_amount ON all_eth_trades (amount);
+CREATE INDEX IF NOT EXISTS idx_okx_btc_trades_amount ON okx_btc_trades (amount);
+CREATE INDEX IF NOT EXISTS idx_okx_eth_trades_amount ON okx_eth_trades (amount);
+
+-- Составные индексы для сложных запросов
+CREATE INDEX IF NOT EXISTS idx_all_btc_trades_timestamp_instrument ON all_btc_trades (timestamp, instrument_name);
+CREATE INDEX IF NOT EXISTS idx_all_eth_trades_timestamp_instrument ON all_eth_trades (timestamp, instrument_name);
+CREATE INDEX IF NOT EXISTS idx_okx_btc_trades_timestamp_instrument ON okx_btc_trades (timestamp, instrument_name);
+CREATE INDEX IF NOT EXISTS idx_okx_eth_trades_timestamp_instrument ON okx_eth_trades (timestamp, instrument_name);
 
 -- Индексы для пользовательской системы
 CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);

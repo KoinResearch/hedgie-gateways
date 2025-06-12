@@ -24,7 +24,7 @@ class CollectorConfig:
     bybit_enabled: bool = os.getenv("BYBIT_ENABLED", "false").lower() == "true"
     cme_enabled: bool = os.getenv("CME_ENABLED", "false").lower() == "true"
 
-    # COLLECTION_INTERVAL больше не нужен для WebSocket коллекторов
+    collection_interval: int = int(os.getenv("COLLECTION_INTERVAL", "60"))
 
 @dataclass
 class Config:
@@ -46,6 +46,9 @@ class Config:
 
         if not self.database.database:
             errors.append("PG_DATABASE is required")
+
+        if self.collectors.collection_interval <= 0:
+            errors.append("COLLECTION_INTERVAL must be greater than 0")
 
         return errors
 

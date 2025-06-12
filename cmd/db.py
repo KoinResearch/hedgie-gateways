@@ -13,7 +13,6 @@ class DatabaseManager:
         self.pool: Optional[ThreadedConnectionPool] = None
 
     async def init(self):
-        """Инициализация пула соединений и создание базы данных"""
         try:
             await self._create_database_if_not_exists()
             await self._create_connection_pool()
@@ -24,7 +23,6 @@ class DatabaseManager:
             raise error
 
     async def _create_database_if_not_exists(self):
-        """Создание базы данных если она не существует"""
         admin_conn_str = f"postgresql://{config.database.user}:{config.database.password}@{config.database.host}:{config.database.port}/postgres"
 
         try:
@@ -34,7 +32,6 @@ class DatabaseManager:
 
             logger.info("Connected to PostgreSQL server")
 
-            # Проверяем существование базы данных
             cursor.execute("SELECT 1 FROM pg_database WHERE datname = %s", (config.database.database,))
             exists = cursor.fetchone()
 
@@ -53,7 +50,6 @@ class DatabaseManager:
                 conn.close()
 
     async def _create_connection_pool(self):
-        """Создание пула соединений"""
         try:
             self.pool = ThreadedConnectionPool(
                 minconn=1,
@@ -67,11 +63,9 @@ class DatabaseManager:
             raise error
 
     async def _run_migrations(self):
-        """Запуск миграций"""
         try:
             with self.get_connection() as conn:
                 with conn.cursor() as cursor:
-                    # Читаем и выполняем миграции
                     with open('migrations/init.sql', 'r') as f:
                         migration_sql = f.read()
 
@@ -85,7 +79,6 @@ class DatabaseManager:
 
     @contextmanager
     def get_connection(self):
-        """Контекстный менеджер для получения соединения из пула"""
         if not self.pool:
             raise RuntimeError("Database pool not initialized")
 
@@ -102,10 +95,8 @@ class DatabaseManager:
                 self.pool.putconn(conn)
 
     def close(self):
-        """Закрытие пула соединений"""
         if self.pool:
             self.pool.closeall()
             logger.info("Database connection pool closed")
 
-# Глобальный экземпляр менеджера базы данных
 db_manager = DatabaseManager()

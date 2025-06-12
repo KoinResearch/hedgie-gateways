@@ -5,8 +5,6 @@ from .logger import CollectorLogger
 from cmd.db import db_manager
 
 class BaseCollector(ABC):
-    """Базовый класс для всех коллекторов"""
-
     def __init__(self, name: str):
         self.name = name
         self.logger = CollectorLogger(name)
@@ -19,47 +17,42 @@ class BaseCollector(ABC):
         }
 
     async def init(self):
-        """Инициализация коллектора"""
         self.logger.info("Initializing collector")
         await self._init_collector()
         self.logger.info("Collector initialized successfully")
 
     @abstractmethod
     async def _init_collector(self):
-        """Специфичная инициализация коллектора"""
         pass
 
     async def start(self):
-        """Запуск коллектора"""
         self.running = True
         self.logger.info("Starting collector")
 
-        # Для WebSocket коллекторов - запускаем непрерывный сбор данных
-        try:
-            await self._collect_data()
-        except Exception as error:
-            self.logger.error("Error in collection cycle", error)
-            self.stats['failed_requests'] += 1
+        while self.running:
+            try:
+                await self._collect_data()
+                await asyncio.sleep(60)
+            except Exception as error:
+                self.logger.error("Error in collection cycle", error)
+                self.stats['failed_requests'] += 1
+                await asyncio.sleep(60)
 
     @abstractmethod
     async def _collect_data(self):
-        """Основная логика сбора данных"""
         pass
 
     async def stop(self):
-        """Остановка коллектора"""
         self.running = False
         self.logger.info("Collector stopped")
         self._log_stats()
 
     def _log_stats(self):
-        """Логирование статистики"""
         self.logger.info(f"Final stats: {self.stats}")
 
     async def save_trades(self, trades: List[Dict[str, Any]], table_name: str):
-        """Сохранение торгов в базу данных"""
         if not trades:
-            self.logger.debug("No trades to save")
+            self.logger.info("No trades to save")
             return
 
         try:
@@ -68,26 +61,20 @@ class BaseCollector(ABC):
                     saved_count = 0
 
                     for trade in trades:
-                        try:
-                            cursor.execute(
-                                f"SELECT 1 FROM {table_name} WHERE trade_id = %s LIMIT 1",
-                                (trade['trade_id'],)
-                            )
+                        cursor.execute(
+                            f"SELECT 1 FROM {table_name} WHERE trade_id = %s LIMIT 1",
+                            (trade['trade_id'],)
+                        )
 
-                            if cursor.fetchone():
-                                continue
-
-                            self._insert_trade(cursor, trade, table_name)
-                            saved_count += 1
-                        except Exception as trade_error:
-                            self.logger.warning(f"Failed to save trade {trade.get('trade_id', 'unknown')}: {trade_error}")
+                        if cursor.fetchone():
                             continue
+
+                        self._insert_trade(cursor, trade, table_name)
+                        saved_count += 1
 
                     conn.commit()
                     self.stats['total_trades_saved'] += saved_count
-
-                    if saved_count > 0:
-                        self.logger.info(f"Saved {saved_count} new trades to {table_name}")
+                    self.logger.info(f"Saved {saved_count} new trades to {table_name}")
 
         except Exception as error:
             self.logger.error("Error saving trades", error)
@@ -95,5 +82,4 @@ class BaseCollector(ABC):
 
     @abstractmethod
     def _insert_trade(self, cursor, trade: Dict[str, Any], table_name: str):
-        """Вставка торга в базу данных (синхронный метод)"""
         pass

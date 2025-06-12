@@ -17,19 +17,15 @@ class CollectorOrchestrator:
         self.running = False
 
     async def init(self):
-        """Инициализация оркестратора"""
         try:
-            # Валидация конфигурации
             errors = config.validate()
             if errors:
                 raise ValueError(f"Configuration validation failed:\n{chr(10).join(errors)}")
 
             logger.info("Configuration validated successfully")
 
-            # Инициализация базы данных
             await db_manager.init()
 
-            # Инициализация коллекторов
             await self._init_collectors()
 
             logger.info("Collector orchestrator initialized successfully")
@@ -39,7 +35,6 @@ class CollectorOrchestrator:
             raise error
 
     async def _init_collectors(self):
-        """Инициализация активных коллекторов"""
         if config.collectors.deribit_enabled:
             deribit_collector = DeribitCollector()
             await deribit_collector.init()
@@ -55,7 +50,6 @@ class CollectorOrchestrator:
         logger.info(f"Initialized {len(self.collectors)} collectors")
 
     async def start(self):
-        """Запуск всех коллекторов"""
         self.running = True
         logger.info("Starting all collectors...")
 
@@ -71,7 +65,6 @@ class CollectorOrchestrator:
             await self.stop()
 
     async def stop(self):
-        """Остановка всех коллекторов"""
         self.running = False
         logger.info("Stopping all collectors...")
 
@@ -82,12 +75,10 @@ class CollectorOrchestrator:
         logger.info("All collectors stopped")
 
 async def main():
-    """Главная функция приложения"""
     setup_logger()
 
     orchestrator = CollectorOrchestrator()
 
-    # Обработчики сигналов для graceful shutdown
     def signal_handler(signum, frame):
         logger.info(f"Received signal {signum}, shutting down gracefully...")
         asyncio.create_task(orchestrator.stop())

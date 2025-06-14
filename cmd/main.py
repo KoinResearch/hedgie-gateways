@@ -8,6 +8,7 @@ from .db import db_manager
 from internal.shared.logger import setup_logger
 from internal.collectors.deribit_collector import DeribitCollector
 from internal.collectors.okx_collector import OKXCollector
+from internal.collectors.bybit_collector import BybitCollector
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,12 @@ class CollectorOrchestrator:
             await okx_collector.init()
             self.collectors.append(okx_collector)
             logger.info("OKX collector initialized")
+
+        if config.collectors.bybit_enabled:
+            bybit_collector = BybitCollector()
+            await bybit_collector.init()
+            self.collectors.append(bybit_collector)
+            logger.info("Bybit collector initialized")
 
         logger.info(f"Initialized {len(self.collectors)} collectors")
 

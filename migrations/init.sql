@@ -156,6 +156,36 @@ CREATE TABLE IF NOT EXISTS okx_eth_trades (
     CONSTRAINT okx_eth_trades_pkey PRIMARY KEY (trade_id)
 );
 
+-- Все BTC торги на Bybit
+CREATE TABLE IF NOT EXISTS bybit_btc_trades (
+    trade_id TEXT NOT NULL,
+    contracts NUMERIC,
+    mark_price NUMERIC,
+    amount NUMERIC,
+    instrument_name TEXT,
+    index_price NUMERIC,
+    direction TEXT,
+    price NUMERIC,
+    iv NUMERIC,
+    timestamp TIMESTAMP WITHOUT TIME ZONE,
+    CONSTRAINT bybit_btc_trades_pkey PRIMARY KEY (trade_id)
+);
+
+-- Все ETH торги на Bybit
+CREATE TABLE IF NOT EXISTS bybit_eth_trades (
+    trade_id TEXT NOT NULL,
+    contracts NUMERIC,
+    mark_price NUMERIC,
+    amount NUMERIC,
+    instrument_name TEXT,
+    index_price NUMERIC,
+    direction TEXT,
+    price NUMERIC,
+    iv NUMERIC,
+    timestamp TIMESTAMP WITHOUT TIME ZONE,
+    CONSTRAINT bybit_eth_trades_pkey PRIMARY KEY (trade_id)
+);
+
 -- =============================================================================
 -- СИСТЕМА ПОЛЬЗОВАТЕЛЕЙ И АУТЕНТИФИКАЦИИ
 -- =============================================================================
@@ -270,6 +300,11 @@ CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users (verification_t
 CREATE INDEX IF NOT EXISTS idx_users_reset_password_token ON users (reset_password_token);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens (user_id);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens (expires_at);
+
+CREATE INDEX IF NOT EXISTS idx_bybit_btc_timestamp ON bybit_btc_trades(timestamp);
+CREATE INDEX IF NOT EXISTS idx_bybit_btc_instrument ON bybit_btc_trades(instrument_name);
+CREATE INDEX IF NOT EXISTS idx_bybit_eth_timestamp ON bybit_eth_trades(timestamp);
+CREATE INDEX IF NOT EXISTS idx_bybit_eth_instrument ON bybit_eth_trades(instrument_name);
 
 -- =============================================================================
 -- БАЗОВЫЕ ДАННЫЕ

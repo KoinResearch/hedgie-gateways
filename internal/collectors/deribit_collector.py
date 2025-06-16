@@ -19,6 +19,7 @@ class DeribitCollector(BaseCollector):
             connector=connector,
             headers={'User-Agent': 'Hedgie-Collector/1.0'}
         )
+        self.logger.info("Successfully connected to Deribit API")
 
     async def _collect_data(self):
         current_time = datetime.utcnow()
@@ -30,31 +31,43 @@ class DeribitCollector(BaseCollector):
         for currency in self.currency_pairs:
             try:
                 self.stats['total_requests'] += 1
-                self.logger.info(f"Fetching trades for {currency} from {start_timestamp} to {end_timestamp}")
 
                 trades = await self._fetch_trades(currency, start_timestamp, end_timestamp)
 
                 if trades:
-                    self.logger.info(f"Fetched {len(trades)} trades for {currency}")
-
                     options_trades = self._filter_options(trades)
-                    self.logger.info(f"Found {len(options_trades)} options trades for {currency}")
 
                     if options_trades:
-                        await self.save_trades(options_trades, f"all_{currency.lower()}_trades")
+                        processed_trades = []
+                        for trade in options_trades:
+                            processed_trade = self._process_trade(trade)
+                            if processed_trade:
+                                processed_trades.append(processed_trade)
 
-                        block_trades = self._filter_block_trades(options_trades)
-                        if block_trades:
-                            self.logger.info(f"Found {len(block_trades)} block trades for {currency}")
-                            await self.save_trades(block_trades, f"{currency.lower()}_block_trades")
-                else:
-                    self.logger.info(f"No trades found for {currency}")
+                        if processed_trades:
+                            await self.save_trades(processed_trades, f"all_{currency.lower()}_trades")
+
+                            block_trades = self._filter_block_trades(processed_trades)
+                            if block_trades:
+                                await self.save_trades(block_trades, f"{currency.lower()}_block_trades")
 
                 self.stats['successful_requests'] += 1
 
             except Exception as error:
-                self.logger.error(f"Error fetching {currency} trades", error)
+                self.logger.error(f"❌ Error fetching {currency} trades: {error}")
                 self.stats['failed_requests'] += 1
+
+    def _process_trade(self, trade: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            timestamp_ms = trade.get('timestamp')
+            if timestamp_ms:
+                timestamp_dt = datetime.fromtimestamp(timestamp_ms / 1000.0)
+                trade['timestamp'] = timestamp_dt
+
+            return trade
+        except Exception as e:
+            self.logger.error(f"Error processing trade: {e}")
+            return None
 
     async def _fetch_trades(self, currency: str, start_timestamp: int, end_timestamp: int) -> List[Dict[str, Any]]:
         endpoint = f"{self.base_url}/public/get_last_trades_by_currency_and_time"
@@ -67,31 +80,22 @@ class DeribitCollector(BaseCollector):
             'include_old': 'false'
         }
 
-        self.logger.debug(f"Request params: {params}")
-
         try:
             async with self.session.get(endpoint, params=params) as response:
                 if response.status != 200:
-                    self.logger.error(f"HTTP error {response.status}: {await response.text()}")
                     response.raise_for_status()
 
                 data = await response.json()
 
                 if 'error' in data:
-                    self.logger.error(f"API error: {data['error']}")
                     return []
 
                 if 'result' in data and 'trades' in data['result']:
                     return data['result']['trades']
 
-                self.logger.warning(f"Unexpected response structure: {data}")
                 return []
 
-        except aiohttp.ClientError as e:
-            self.logger.error(f"HTTP client error: {e}")
-            raise
         except Exception as e:
-            self.logger.error(f"Unexpected error: {e}")
             raise
 
     def _filter_options(self, trades: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -102,8 +106,6 @@ class DeribitCollector(BaseCollector):
                 parts = instrument_name.split('-')
                 if len(parts) >= 4 and parts[-1] in {'C', 'P'}:
                     filtered.append(trade)
-
-        self.logger.debug(f"Filtered {len(filtered)} options from {len(trades)} trades")
         return filtered
 
     def _filter_block_trades(self, trades: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -112,22 +114,19 @@ class DeribitCollector(BaseCollector):
             if ('block_trade_id' in trade and trade['block_trade_id'] is not None and
                 'block_trade_leg_count' in trade and trade['block_trade_leg_count'] is not None):
                 filtered.append(trade)
-
-        self.logger.debug(f"Filtered {len(filtered)} block trades from {len(trades)} trades")
         return filtered
 
-    def _insert_trade(self, cursor, trade: Dict[str, Any], table_name: str):
+    async def _insert_trade_async(self, conn, trade: Dict[str, Any], table_name: str):
         query = f"""
         INSERT INTO {table_name} (
             trade_id, block_trade_leg_count, contracts, block_trade_id, combo_id, tick_direction,
             mark_price, amount, trade_seq, instrument_name, index_price, direction, price, iv,
             liquidation, combo_trade_id, timestamp
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, to_timestamp(%s / 1000))
-        ON CONFLICT (trade_id) DO NOTHING
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
         """
 
-        cursor.execute(query, (
+        await conn.execute(query,
             trade.get('trade_id'),
             trade.get('block_trade_leg_count'),
             trade.get('contracts'),
@@ -145,10 +144,12 @@ class DeribitCollector(BaseCollector):
             trade.get('liquidation'),
             trade.get('combo_trade_id'),
             trade.get('timestamp')
-        ))
+        )
+
+    def _insert_trade(self, cursor, trade: Dict[str, Any], table_name: str):
+        pass
 
     async def stop(self):
         if self.session and not self.session.closed:
             await self.session.close()
         await super().stop()
-

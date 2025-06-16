@@ -9,6 +9,7 @@ from internal.shared.logger import setup_logger
 from internal.collectors.deribit_collector import DeribitCollector
 from internal.collectors.okx_collector import OKXCollector
 from internal.collectors.bybit_collector import BybitCollector
+from internal.collectors.binance_collector import BinanceCollector
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,12 @@ class CollectorOrchestrator:
             self.collectors.append(bybit_collector)
             logger.info("Bybit collector initialized")
 
+        if config.collectors.binance_enabled:
+            binance_collector = BinanceCollector()
+            await binance_collector.init()
+            self.collectors.append(binance_collector)
+            logger.info("Binance collector initialized")
+
         logger.info(f"Initialized {len(self.collectors)} collectors")
 
     async def start(self):
@@ -78,7 +85,7 @@ class CollectorOrchestrator:
         for collector in self.collectors:
             await collector.stop()
 
-        db_manager.close()
+        await db_manager.close()
         logger.info("All collectors stopped")
 
 async def main():

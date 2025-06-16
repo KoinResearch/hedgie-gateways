@@ -1,7 +1,6 @@
 import asyncio
 import aiohttp
-import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, Any, List, Optional, Set
 from ..shared.base_collector import BaseCollector
 
@@ -9,10 +8,9 @@ class BybitCollector(BaseCollector):
 
     def __init__(self):
         super().__init__("bybit")
-        self.base_url = "https://api-testnet.bybit.com"
+        self.base_url = None
         self.session = None
         self.currency_pairs = ['BTC', 'ETH']
-        self.collection_interval = 30
 
         self.processed_trade_ids: Dict[str, Set[str]] = {
             'BTC': set(),
@@ -22,6 +20,10 @@ class BybitCollector(BaseCollector):
         self.max_cache_size = 10000
 
     async def _init_collector(self):
+        import os
+
+        self.base_url = os.getenv("BYBIT_API_URL", "https://api-testnet.bybit.com")
+
         timeout = aiohttp.ClientTimeout(total=30)
         connector = aiohttp.TCPConnector(limit=100, limit_per_host=30)
         self.session = aiohttp.ClientSession(
@@ -50,10 +52,10 @@ class BybitCollector(BaseCollector):
                         trade_ids = {row['trade_id'] for row in rows}
                         self.processed_trade_ids[currency] = trade_ids
 
-                    except Exception as e:
+                    except Exception:
                         self.processed_trade_ids[currency] = set()
 
-        except Exception as e:
+        except Exception:
             pass
 
     async def _collect_data(self):
@@ -81,8 +83,6 @@ class BybitCollector(BaseCollector):
                                 await self.save_trades(processed_trades, table_name)
 
                                 self._update_cache(processed_trades, currency)
-
-                                self.logger.info(f"Saved {len(processed_trades)} {currency} trades")
                                 self.stats['total_trades_saved'] += len(processed_trades)
 
                 self.stats['successful_requests'] += 1
@@ -142,7 +142,7 @@ class BybitCollector(BaseCollector):
 
                 return trades_list
 
-        except Exception as e:
+        except Exception:
             raise
 
     def _filter_options(self, trades: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -191,7 +191,7 @@ class BybitCollector(BaseCollector):
 
             return processed_trade
 
-        except Exception as e:
+        except Exception:
             return None
 
     def _safe_float(self, value) -> Optional[float]:
@@ -202,17 +202,16 @@ class BybitCollector(BaseCollector):
         except (ValueError, TypeError):
             return None
 
-    def _insert_trade(self, cursor, trade: Dict[str, Any], table_name: str):
+    async def _insert_trade_async(self, conn, trade: Dict[str, Any], table_name: str):
         query = f"""
         INSERT INTO {table_name} (
             trade_id, contracts, mark_price, amount, instrument_name,
             index_price, direction, price, iv, timestamp
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (trade_id) DO NOTHING
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         """
 
-        cursor.execute(query, (
+        await conn.execute(query,
             trade.get('trade_id'),
             trade.get('contracts'),
             trade.get('mark_price'),
@@ -223,7 +222,10 @@ class BybitCollector(BaseCollector):
             trade.get('price'),
             trade.get('iv'),
             trade.get('timestamp')
-        ))
+        )
+
+    def _insert_trade(self, cursor, trade: Dict[str, Any], table_name: str):
+        pass
 
     async def stop(self):
         if self.session and not self.session.closed:

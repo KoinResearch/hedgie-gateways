@@ -22,8 +22,7 @@ class OKXCollector(BaseCollector):
             connector=connector,
             headers={'User-Agent': 'Hedgie-OKX-Collector/1.0'}
         )
-
-        self.logger.info("OKX collector initialized successfully")
+        self.logger.info("Successfully connected to OKX API")
 
     async def _collect_data(self):
         max_retries = 5
@@ -41,7 +40,7 @@ class OKXCollector(BaseCollector):
 
             except Exception as error:
                 retry_count += 1
-                self.logger.error(f"WebSocket error, retry {retry_count}/{max_retries}", error)
+                self.logger.error(f"WebSocket error, retry {retry_count}/{max_retries}: {error}")
                 await asyncio.sleep(min(retry_count * 2, 30))
 
         if retry_count >= max_retries:
@@ -124,7 +123,7 @@ class OKXCollector(BaseCollector):
     def _process_trade(self, trade: Dict[str, Any], currency: str) -> Dict[str, Any]:
         try:
             timestamp_ms = int(trade['ts'])
-            timestamp_seconds = timestamp_ms / 1000
+            timestamp_dt = datetime.fromtimestamp(timestamp_ms / 1000.0)
 
             instrument_name = self._convert_instrument_name(trade.get('instId', ''))
 
@@ -143,7 +142,7 @@ class OKXCollector(BaseCollector):
                 'direction': trade.get('side'),
                 'price': self._safe_float(trade.get('px')),
                 'iv': iv,
-                'timestamp': timestamp_seconds
+                'timestamp': timestamp_dt
             }
 
             self.logger.debug(f"Processed trade: {processed_trade['trade_id']} - {instrument_name}")
@@ -186,17 +185,16 @@ class OKXCollector(BaseCollector):
         except (ValueError, TypeError):
             return None
 
-    def _insert_trade(self, cursor, trade: Dict[str, Any], table_name: str):
+    async def _insert_trade_async(self, conn, trade: Dict[str, Any], table_name: str):
         query = f"""
         INSERT INTO {table_name} (
             trade_id, mark_price, amount, instrument_name, index_price,
             direction, price, iv, timestamp
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, to_timestamp(%s))
-        ON CONFLICT (trade_id) DO NOTHING
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         """
 
-        cursor.execute(query, (
+        await conn.execute(query,
             trade['trade_id'],
             trade['mark_price'],
             trade['amount'],
@@ -206,7 +204,10 @@ class OKXCollector(BaseCollector):
             trade['price'],
             trade['iv'],
             trade['timestamp']
-        ))
+        )
+
+    def _insert_trade(self, cursor, trade: Dict[str, Any], table_name: str):
+        pass
 
     async def stop(self):
         self.logger.info("Stopping OKX collector...")

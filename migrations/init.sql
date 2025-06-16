@@ -124,6 +124,7 @@ CREATE TABLE IF NOT EXISTS eth_block_trades (
     CONSTRAINT eth_block_trades_pkey PRIMARY KEY (trade_id)
 );
 
+
 -- =============================================================================
 -- ТОРГОВЫЕ ТАБЛИЦЫ - OKX
 -- =============================================================================
@@ -184,6 +185,26 @@ CREATE TABLE IF NOT EXISTS bybit_eth_trades (
     iv NUMERIC,
     timestamp TIMESTAMP WITHOUT TIME ZONE,
     CONSTRAINT bybit_eth_trades_pkey PRIMARY KEY (trade_id)
+);
+
+CREATE TABLE IF NOT EXISTS binance_btc_trades (
+    trade_id BIGINT PRIMARY KEY,
+    contracts NUMERIC,
+    amount NUMERIC,
+    instrument_name TEXT,
+    direction TEXT,
+    price NUMERIC,
+    timestamp TIMESTAMP WITHOUT TIME ZONE
+);
+
+CREATE TABLE IF NOT EXISTS binance_eth_trades (
+    trade_id BIGINT PRIMARY KEY,
+    contracts NUMERIC,
+    amount NUMERIC,
+    instrument_name TEXT,
+    direction TEXT,
+    price NUMERIC,
+    timestamp TIMESTAMP WITHOUT TIME ZONE
 );
 
 -- =============================================================================
@@ -305,6 +326,11 @@ CREATE INDEX IF NOT EXISTS idx_bybit_btc_timestamp ON bybit_btc_trades(timestamp
 CREATE INDEX IF NOT EXISTS idx_bybit_btc_instrument ON bybit_btc_trades(instrument_name);
 CREATE INDEX IF NOT EXISTS idx_bybit_eth_timestamp ON bybit_eth_trades(timestamp);
 CREATE INDEX IF NOT EXISTS idx_bybit_eth_instrument ON bybit_eth_trades(instrument_name);
+
+CREATE INDEX IF NOT EXISTS idx_binance_btc_trades_symbol ON binance_btc_trades(instrument_name);
+CREATE INDEX IF NOT EXISTS idx_binance_btc_trades_timestamp ON binance_btc_trades(timestamp);
+CREATE INDEX IF NOT EXISTS idx_binance_eth_trades_symbol ON binance_eth_trades(instrument_name);
+CREATE INDEX IF NOT EXISTS idx_binance_eth_trades_timestamp ON binance_eth_trades(timestamp);
 
 -- =============================================================================
 -- БАЗОВЫЕ ДАННЫЕ

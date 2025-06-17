@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Set, Optional
 from decimal import Decimal
 
 from ..shared.base_collector import BaseCollector
+from ..shared.date_converter import normalize_binance_instrument_name
 
 class BinanceCollector(BaseCollector):
     def __init__(self):
@@ -116,7 +117,7 @@ class BinanceCollector(BaseCollector):
                 'trade_id': trade_id,
                 'contracts': abs_quantity,
                 'amount': amount,
-                'instrument_name': symbol,
+                'instrument_name': normalize_binance_instrument_name(symbol),
                 'direction': direction,
                 'price': price,
                 'timestamp': timestamp

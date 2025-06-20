@@ -10,6 +10,7 @@ from internal.collectors.deribit_collector import DeribitCollector
 from internal.collectors.okx_collector import OKXCollector
 from internal.collectors.bybit_collector import BybitCollector
 from internal.collectors.binance_collector import BinanceCollector
+from internal.telegram.bot_manager import telegram_manager
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ class CollectorOrchestrator:
     def __init__(self):
         self.collectors = []
         self.running = False
+        self.telegram_task = None
 
     async def init(self):
         try:
@@ -27,6 +29,8 @@ class CollectorOrchestrator:
             logger.info("Configuration validated successfully")
 
             await db_manager.init()
+
+            await telegram_manager.init()
 
             await self._init_collectors()
 
@@ -68,9 +72,14 @@ class CollectorOrchestrator:
         logger.info("Starting all collectors...")
 
         tasks = []
+
         for collector in self.collectors:
             task = asyncio.create_task(collector.start())
             tasks.append(task)
+
+        if telegram_manager.bot:
+            self.telegram_task = asyncio.create_task(telegram_manager.start())
+            tasks.append(self.telegram_task)
 
         try:
             await asyncio.gather(*tasks)
@@ -85,6 +94,14 @@ class CollectorOrchestrator:
         for collector in self.collectors:
             await collector.stop()
 
+        if self.telegram_task:
+            self.telegram_task.cancel()
+            try:
+                await self.telegram_task
+            except asyncio.CancelledError:
+                pass
+
+        await telegram_manager.stop()
         await db_manager.close()
         logger.info("All collectors stopped")
 

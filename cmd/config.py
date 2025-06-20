@@ -1,3 +1,4 @@
+# cmd/config.py
 import os
 from dataclasses import dataclass
 from typing import List
@@ -27,13 +28,22 @@ class CollectorConfig:
     collection_interval: int = int(os.getenv("COLLECTION_INTERVAL", "60"))
 
 @dataclass
+class TelegramConfig:
+    bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    admin_chat_id: str = os.getenv("TELEGRAM_ADMIN_CHAT_ID", "")
+    notifications_enabled: bool = os.getenv("TELEGRAM_NOTIFICATIONS_ENABLED", "true").lower() == "true"
+    alert_cooldown: int = int(os.getenv("TELEGRAM_ALERT_COOLDOWN", "300"))
+
+@dataclass
 class Config:
     database: DatabaseConfig
     collectors: CollectorConfig
+    telegram: TelegramConfig
 
     def __init__(self):
         self.database = DatabaseConfig()
         self.collectors = CollectorConfig()
+        self.telegram = TelegramConfig()
 
     def validate(self) -> List[str]:
         errors = []
@@ -49,6 +59,13 @@ class Config:
 
         if self.collectors.collection_interval <= 0:
             errors.append("COLLECTION_INTERVAL must be greater than 0")
+
+        if self.telegram.notifications_enabled:
+            if not self.telegram.bot_token:
+                errors.append("TELEGRAM_BOT_TOKEN is required when notifications are enabled")
+
+            if not self.telegram.admin_chat_id:
+                errors.append("TELEGRAM_ADMIN_CHAT_ID is required when notifications are enabled")
 
         return errors
 

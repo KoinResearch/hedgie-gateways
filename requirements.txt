@@ -8,3 +8,4 @@ pybit==5.7.0
 pycryptodome==3.19.0
 binance-connector==3.8.1
 python-binance==1.0.19
+aiogram==3.3.0

@@ -1,4 +1,3 @@
-# cmd/config.py
 import os
 from dataclasses import dataclass
 from typing import List
@@ -24,6 +23,7 @@ class CollectorConfig:
     binance_enabled: bool = os.getenv("BINANCE_ENABLED", "false").lower() == "true"
     bybit_enabled: bool = os.getenv("BYBIT_ENABLED", "false").lower() == "true"
     cme_enabled: bool = os.getenv("CME_ENABLED", "false").lower() == "true"
+    ohlc_enabled: bool = os.getenv("OHLC_ENABLED", "true").lower() == "true"
 
     collection_interval: int = int(os.getenv("COLLECTION_INTERVAL", "60"))
 

@@ -274,6 +274,54 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 ALTER SEQUENCE refresh_tokens_id_seq OWNED BY refresh_tokens.id;
 
 -- =============================================================================
+-- ТАБЛИЦЫ OHLC ДАННЫХ
+-- =============================================================================
+
+-- OHLC данные для BTC
+CREATE TABLE IF NOT EXISTS ohlc_btc (
+    id BIGSERIAL PRIMARY KEY,
+    open_time BIGINT NOT NULL,
+    open_price NUMERIC(20, 8) NOT NULL,
+    high_price NUMERIC(20, 8) NOT NULL,
+    low_price NUMERIC(20, 8) NOT NULL,
+    close_price NUMERIC(20, 8) NOT NULL,
+    volume NUMERIC(20, 8) NOT NULL,
+    close_time BIGINT NOT NULL,
+    quote_asset_volume NUMERIC(20, 8),
+    number_of_trades INTEGER,
+    taker_buy_base_asset_volume NUMERIC(20, 8),
+    taker_buy_quote_asset_volume NUMERIC(20, 8),
+    interval_type VARCHAR(10) NOT NULL, -- 1m, 5m, 15m, 1h, 4h, 1d, etc.
+    exchange VARCHAR(20) NOT NULL DEFAULT 'binance',
+    symbol VARCHAR(20) NOT NULL DEFAULT 'BTCUSDT',
+    timestamp TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT ohlc_btc_unique_candle UNIQUE (open_time, interval_type, exchange, symbol)
+);
+
+-- OHLC данные для ETH
+CREATE TABLE IF NOT EXISTS ohlc_eth (
+    id BIGSERIAL PRIMARY KEY,
+    open_time BIGINT NOT NULL,
+    open_price NUMERIC(20, 8) NOT NULL,
+    high_price NUMERIC(20, 8) NOT NULL,
+    low_price NUMERIC(20, 8) NOT NULL,
+    close_price NUMERIC(20, 8) NOT NULL,
+    volume NUMERIC(20, 8) NOT NULL,
+    close_time BIGINT NOT NULL,
+    quote_asset_volume NUMERIC(20, 8),
+    number_of_trades INTEGER,
+    taker_buy_base_asset_volume NUMERIC(20, 8),
+    taker_buy_quote_asset_volume NUMERIC(20, 8),
+    interval_type VARCHAR(10) NOT NULL, -- 1m, 5m, 15m, 1h, 4h, 1d, etc.
+    exchange VARCHAR(20) NOT NULL DEFAULT 'binance',
+    symbol VARCHAR(20) NOT NULL DEFAULT 'ETHUSDT',
+    timestamp TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT ohlc_eth_unique_candle UNIQUE (open_time, interval_type, exchange, symbol)
+);
+
+-- =============================================================================
 -- ИНДЕКСЫ ДЛЯ ОПТИМИЗАЦИИ ПРОИЗВОДИТЕЛЬНОСТИ
 -- =============================================================================
 
@@ -332,6 +380,22 @@ CREATE INDEX IF NOT EXISTS idx_binance_btc_trades_timestamp ON binance_btc_trade
 CREATE INDEX IF NOT EXISTS idx_binance_eth_trades_symbol ON binance_eth_trades(instrument_name);
 CREATE INDEX IF NOT EXISTS idx_binance_eth_trades_timestamp ON binance_eth_trades(timestamp);
 
+-- Индексы для BTC OHLC
+CREATE INDEX IF NOT EXISTS idx_ohlc_btc_open_time ON ohlc_btc (open_time);
+CREATE INDEX IF NOT EXISTS idx_ohlc_btc_timestamp ON ohlc_btc (timestamp);
+CREATE INDEX IF NOT EXISTS idx_ohlc_btc_interval ON ohlc_btc (interval_type);
+CREATE INDEX IF NOT EXISTS idx_ohlc_btc_exchange ON ohlc_btc (exchange);
+CREATE INDEX IF NOT EXISTS idx_ohlc_btc_symbol ON ohlc_btc (symbol);
+CREATE INDEX IF NOT EXISTS idx_ohlc_btc_composite ON ohlc_btc (exchange, symbol, interval_type, open_time);
+
+-- Индексы для ETH OHLC
+CREATE INDEX IF NOT EXISTS idx_ohlc_eth_open_time ON ohlc_eth (open_time);
+CREATE INDEX IF NOT EXISTS idx_ohlc_eth_timestamp ON ohlc_eth (timestamp);
+CREATE INDEX IF NOT EXISTS idx_ohlc_eth_interval ON ohlc_eth (interval_type);
+CREATE INDEX IF NOT EXISTS idx_ohlc_eth_exchange ON ohlc_eth (exchange);
+CREATE INDEX IF NOT EXISTS idx_ohlc_eth_symbol ON ohlc_eth (symbol);
+CREATE INDEX IF NOT EXISTS idx_ohlc_eth_composite ON ohlc_eth (exchange, symbol, interval_type, open_time);
+
 -- =============================================================================
 -- БАЗОВЫЕ ДАННЫЕ
 -- =============================================================================
@@ -363,5 +427,19 @@ COMMENT ON TABLE users IS 'Пользователи системы';
 COMMENT ON TABLE roles IS 'Роли пользователей';
 COMMENT ON TABLE user_roles IS 'Связь пользователей и ролей';
 COMMENT ON TABLE refresh_tokens IS 'Refresh токены для аутентификации';
+
+-- Комментарии для OHLC таблиц
+COMMENT ON TABLE ohlc_btc IS 'OHLC данные для BTC с различных бирж и интервалов';
+COMMENT ON TABLE ohlc_eth IS 'OHLC данные для ETH с различных бирж и интервалов';
+
+COMMENT ON COLUMN ohlc_btc.open_time IS 'Время открытия свечи (timestamp в миллисекундах)';
+COMMENT ON COLUMN ohlc_btc.close_time IS 'Время закрытия свечи (timestamp в миллисекундах)';
+COMMENT ON COLUMN ohlc_btc.interval_type IS 'Тип интервала: 1m, 5m, 15m, 1h, 4h, 1d и т.д.';
+COMMENT ON COLUMN ohlc_btc.timestamp IS 'Время открытия свечи в формате datetime';
+
+COMMENT ON COLUMN ohlc_eth.open_time IS 'Время открытия свечи (timestamp в миллисекундах)';
+COMMENT ON COLUMN ohlc_eth.close_time IS 'Время закрытия свечи (timestamp в миллисекундах)';
+COMMENT ON COLUMN ohlc_eth.interval_type IS 'Тип интервала: 1m, 5m, 15m, 1h, 4h, 1d и т.д.';
+COMMENT ON COLUMN ohlc_eth.timestamp IS 'Время открытия свечи в формате datetime';
 
 -- Готово! Базовая схема создана.

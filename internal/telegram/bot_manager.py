@@ -24,7 +24,6 @@ class TelegramBotManager:
             keyboard=[
                 [
                     KeyboardButton(text="📊"),
-                    KeyboardButton(text="📄"),
                     KeyboardButton(text="📈")
                 ]
             ],
@@ -61,7 +60,6 @@ class TelegramBotManager:
                 "🤖 *Hedgie Gateways Monitor Bot*\n\n"
                 "Используйте кнопки ниже:\n\n"
                 "📊 - Статус всех коллекторов\n"
-                "📄 - Логи коллекторов\n"
                 "📈 - Статистика по торгам",
                 parse_mode="Markdown",
                 reply_markup=self.main_keyboard
@@ -72,37 +70,10 @@ class TelegramBotManager:
             status_text = await self._get_status_message()
             await message.answer(status_text, parse_mode="Markdown")
 
-        @self.dp.message(lambda message: message.text == "📄")
-        async def logs_button_handler(message: types.Message):
-            await message.answer(
-                "📄 *Выберите коллектор для получения логов:*\n\n"
-                "Напишите один из:\n"
-                "• `DER` - Deribit\n"
-                "• `OKX` - OKX\n"
-                "• `BYBIT` - Bybit\n"
-                "• `BINANCE` - Binance",
-                parse_mode="Markdown"
-            )
-
         @self.dp.message(lambda message: message.text == "📈")
         async def stats_button_handler(message: types.Message):
             stats_text = await self._get_stats_message()
             await message.answer(stats_text, parse_mode="Markdown")
-
-        @self.dp.message(lambda message: message.text and message.text.upper() in ["DER", "OKX", "BYBIT", "BINANCE"])
-        async def logs_collector_handler(message: types.Message):
-            collector_name = message.text.upper()
-            collector_map = {
-                "DER": "deribit",
-                "OKX": "okx",
-                "BYBIT": "bybit",
-                "BINANCE": "binance"
-            }
-
-            full_name = collector_map.get(collector_name)
-            if full_name:
-                log_info = await self._get_logs_info(full_name)
-                await message.answer(log_info, parse_mode="Markdown")
 
     async def start(self):
         if not self.bot:
@@ -228,7 +199,9 @@ class TelegramBotManager:
                     ('bybit_btc_trades', 'Bybit BTC'),
                     ('bybit_eth_trades', 'Bybit ETH'),
                     ('binance_btc_trades', 'Binance BTC'),
-                    ('binance_eth_trades', 'Binance ETH')
+                    ('binance_eth_trades', 'Binance ETH'),
+                    ('ohlc_btc', 'OHLC BTC'),
+                    ('ohlc_eth', 'OHLC ETH')
                 ]
 
                 message = "📈 *Статистика по торгам*\n\n"
@@ -265,42 +238,5 @@ class TelegramBotManager:
         except Exception as e:
             logger.error(f"Error getting stats: {e}")
             return "❌ Ошибка получения статистики"
-
-    async def _get_logs_info(self, collector_name: str) -> str:
-        import os
-
-        try:
-            log_file = f"logs/{collector_name}.log"
-
-            if not os.path.exists(log_file):
-                return f"📄 Лог файл для {collector_name} не найден"
-
-            file_size = os.path.getsize(log_file)
-            size_mb = file_size / (1024 * 1024)
-
-            with open(log_file, 'r', encoding='utf-8') as f:
-                lines = f.readlines()
-
-            last_lines = lines[-10:] if len(lines) >= 10 else lines
-
-            message = f"📄 *Логи {collector_name.upper()}*\n\n"
-            message += f"📁 Размер файла: {size_mb:.1f} MB\n"
-            message += f"📝 Всего строк: {len(lines)}\n\n"
-            message += f"*Последние записи:*\n"
-            message += "```\n"
-
-            for line in last_lines:
-                clean_line = line.strip()
-                if len(clean_line) > 100:
-                    clean_line = clean_line[:100] + "..."
-                message += clean_line + "\n"
-
-            message += "```"
-
-            return message
-
-        except Exception as e:
-            logger.error(f"Error reading logs for {collector_name}: {e}")
-            return f"❌ Ошибка чтения логов для {collector_name}"
 
 telegram_manager = TelegramBotManager()

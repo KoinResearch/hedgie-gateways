@@ -11,6 +11,7 @@ from internal.collectors.okx_collector import OKXCollector
 from internal.collectors.bybit_collector import BybitCollector
 from internal.collectors.binance_collector import BinanceCollector
 from internal.telegram.bot_manager import telegram_manager
+from internal.collectors.ohlc_collector import OHLCCollector
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,12 @@ class CollectorOrchestrator:
             await binance_collector.init()
             self.collectors.append(binance_collector)
             logger.info("Binance collector initialized")
+
+        if config.collectors.ohlc_enabled:
+            ohlc_collector = OHLCCollector()
+            await ohlc_collector.init()
+            self.collectors.append(ohlc_collector)
+            logger.info("OHLC collector initialized")
 
         logger.info(f"Initialized {len(self.collectors)} collectors")
 

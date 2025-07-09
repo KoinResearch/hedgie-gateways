@@ -1,44 +1,12 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: hedgie-gateways-pg
-    environment:
-      POSTGRES_DB: ${PG_DATABASE}
-      POSTGRES_USER: ${PG_USER}
-      POSTGRES_PASSWORD: ${PG_PASSWORD}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
-    ports:
-      - "${PG_PORT}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_DATABASE}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    command: >
-      postgres
-      -c shared_preload_libraries=pg_stat_statements
-      -c pg_stat_statements.track=all
-      -c max_connections=200
-      -c shared_buffers=256MB
-      -c effective_cache_size=1GB
-      -c work_mem=4MB
-      -c maintenance_work_mem=64MB
-      -c log_min_messages=ERROR
-      -c log_statement=none
-
   collectors:
     build: .
     container_name: hedgie-gateways
     environment:
-      - PG_HOST=postgres
-      - PG_PORT=5432
+      - PG_HOST=${PG_HOST}
+      - PG_PORT=${PG_PORT}
       - PG_USER=${PG_USER}
       - PG_PASSWORD=${PG_PASSWORD}
       - PG_DATABASE=${PG_DATABASE}
@@ -49,14 +17,7 @@ services:
       - CME_ENABLED=${CME_ENABLED}
       - COLLECTION_INTERVAL=${COLLECTION_INTERVAL}
       - LOG_LEVEL=${LOG_LEVEL}
-    depends_on:
-      postgres:
-        condition: service_healthy
     volumes:
       - ./logs:/app/logs
       - ./backups:/app/backups
     restart: unless-stopped
-
-volumes:
-  postgres_data:
-    driver: local

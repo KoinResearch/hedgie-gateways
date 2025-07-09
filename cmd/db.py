@@ -11,34 +11,11 @@ class DatabaseManager:
 
     async def init(self):
         try:
-            await self._create_database_if_not_exists()
             await self._create_connection_pool()
             await self._run_migrations()
             logger.info("Database initialization completed successfully")
         except Exception as error:
             logger.error(f"Database initialization failed: {error}")
-            raise error
-
-    async def _create_database_if_not_exists(self):
-        admin_conn_str = f"postgresql://{config.database.user}:{config.database.password}@{config.database.host}:{config.database.port}/postgres"
-
-        try:
-            conn = await asyncpg.connect(admin_conn_str)
-            logger.info("Connected to PostgreSQL server")
-
-            result = await conn.fetch("SELECT 1 FROM pg_database WHERE datname = $1", config.database.database)
-
-            if not result:
-                logger.info(f"Creating database: {config.database.database}")
-                await conn.execute(f'CREATE DATABASE "{config.database.database}"')
-                logger.info(f"Database {config.database.database} created successfully")
-            else:
-                logger.info(f"Database {config.database.database} already exists")
-
-            await conn.close()
-
-        except Exception as error:
-            logger.error(f"Error creating database: {error}")
             raise error
 
     async def _create_connection_pool(self):

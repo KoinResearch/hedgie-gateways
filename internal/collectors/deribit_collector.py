@@ -127,11 +127,11 @@ class DeribitCollector(BaseCollector):
         """
 
         await conn.execute(query,
-            trade.get('trade_id'),
-            trade.get('block_trade_leg_count'),
+            str(trade.get('trade_id', '')),
+            str(trade.get('block_trade_leg_count', '')),
             trade.get('contracts'),
-            trade.get('block_trade_id'),
-            trade.get('combo_id'),
+            str(trade.get('block_trade_id', '')),
+            str(trade.get('combo_id', '')),
             trade.get('tick_direction'),
             trade.get('mark_price'),
             trade.get('amount'),
@@ -142,7 +142,7 @@ class DeribitCollector(BaseCollector):
             trade.get('price'),
             trade.get('iv'),
             trade.get('liquidation'),
-            trade.get('combo_trade_id'),
+            str(trade.get('combo_trade_id', '')),
             trade.get('timestamp')
         )
 

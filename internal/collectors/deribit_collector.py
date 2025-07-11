@@ -111,8 +111,8 @@ class DeribitCollector(BaseCollector):
     def _filter_block_trades(self, trades: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         filtered = []
         for trade in trades:
-            if ('block_trade_id' in trade and trade['block_trade_id'] is not None and
-                'block_trade_leg_count' in trade and trade['block_trade_leg_count'] is not None):
+            block_trade_id = trade.get('block_trade_id')
+            if block_trade_id is not None and block_trade_id != '':
                 filtered.append(trade)
         return filtered
 

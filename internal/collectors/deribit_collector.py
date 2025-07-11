@@ -50,6 +50,9 @@ class DeribitCollector(BaseCollector):
                             block_trades = self._filter_block_trades(processed_trades)
                             if block_trades:
                                 await self.save_trades(block_trades, f"{currency.lower()}_block_trades")
+                                self.logger.info(f"✅ Saved {len(block_trades)} block trades for {currency}")
+                            else:
+                                self.logger.info(f"ℹ️ No block trades found for {currency}")
 
                 self.stats['successful_requests'] += 1
 
@@ -114,6 +117,9 @@ class DeribitCollector(BaseCollector):
             block_trade_id = trade.get('block_trade_id')
             if block_trade_id is not None and block_trade_id != '':
                 filtered.append(trade)
+                self.logger.info(f"🔍 Found block trade: ID={block_trade_id}, Instrument={trade.get('instrument_name')}, Amount={trade.get('amount')}")
+
+        self.logger.info(f"📊 Filtered {len(filtered)} block trades from {len(trades)} total trades")
         return filtered
 
     async def _insert_trade_async(self, conn, trade: Dict[str, Any], table_name: str):
